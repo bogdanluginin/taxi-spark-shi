@@ -4,7 +4,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.utils import AnalysisException
 from pyspark.sql.types import DoubleType, IntegerType
 from data_loader import load_data
-# --- ІМПОРТУЄМО ВСІ ФУНКЦІЇ ДЛЯ ОБОХ ЕТАПІВ ML ---
 from transformer import (
     preprocess_data_for_ml,
     create_features_for_regression,
@@ -15,12 +14,10 @@ from transformer import (
 
 
 def main():
-    # Налаштування Python
     python_path = sys.executable
     os.environ['PYSPARK_PYTHON'] = python_path
     os.environ['PYSPARK_DRIVER_PYTHON'] = python_path
 
-    # Ініціалізація Spark
     spark = SparkSession.builder \
         .appName("NYC Taxi ML Analysis Stage") \
         .master("local[*]") \
@@ -32,28 +29,32 @@ def main():
     print(f"--- Успіх! Версія Spark: {spark.version} ---")
 
     file_path = "/Users/azzasel/Documents/2025 lab /trip_data_10.csv"
+    results_path = "results"  # <--- НОВЕ
 
     try:
-        # 1. Завантаження даних
         print(f"--- Завантаження даних з {file_path} ---")
         taxi_df = load_data(spark, file_path)
 
-        # 2. Попередня обробка
         cleaned_df = preprocess_data_for_ml(taxi_df)
 
-        # Кешуємо очищені дані, оскільки ми будемо використовувати їх двічі
         cleaned_df.cache()
         print("\n--- Очищені дані збережено в кеш ---")
+
+        # --- ЗБЕРІГАЄМО ЗРАЗОК ДАНИХ ДЛЯ SEABORN --- # <--- НОВЕ
+        print("--- Збереження 0.1% зразка чистих даних для візуалізації ---")
+        cleaned_df.sample(fraction=0.001, seed=42) \
+            .coalesce(1) \
+            .write.mode("overwrite") \
+            .option("header", "true") \
+            .csv(f"{results_path}/cleaned_data_sample")
 
         # =================================================
         # ЗАВДАННЯ РЕГРЕСІЇ
         # =================================================
 
-        # 3. Інженерія ознак для Регресії
         regression_data = create_features_for_regression(cleaned_df)
         regression_data.cache()
 
-        # 4. Навчання та Оцінка Моделей Регресії
         train_regression_models(regression_data)
 
         regression_data.unpersist()
@@ -63,17 +64,15 @@ def main():
         # ЗАВДДАННЯ КЛАСИФІКАЦІЇ
         # =================================================
 
-        # 5. Інженерія ознак для Класифікації
         classification_data = create_features_for_classification(cleaned_df)
         classification_data.cache()
 
-        # 6. Навчання та Оцінка Моделей Класифікації
         train_classification_models(classification_data)
 
         classification_data.unpersist()
         print("\n--- Етап Класифікації завершено ---")
 
-        cleaned_df.unpersist()  # Звільняємо головний кеш
+        cleaned_df.unpersist()
 
     except AnalysisException as e:
         print(f"--- ПОМИЛКА: Файл не знайдено або шлях невірний ---")
