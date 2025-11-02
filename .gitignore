@@ -14,3 +14,9 @@ data/
 # Results folder
 results/
 /results/
+
+# ... (ваш існуючий вміст) ...
+
+# Папка з візуалізаціями
+/plots/
+*.png
