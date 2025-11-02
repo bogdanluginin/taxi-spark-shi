@@ -1,0 +1,16 @@
+# Python virtual environment
+venv/
+/venv/
+
+# PyCharm files
+.idea/
+
+# Data files
+data/
+*.csv
+*.json
+*.parquet
+
+# Results folder
+results/
+/results/
